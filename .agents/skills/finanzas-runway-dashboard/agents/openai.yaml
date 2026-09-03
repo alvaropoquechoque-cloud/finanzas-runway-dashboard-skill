@@ -1,0 +1,8 @@
+interface:
+  display_name: "Finanzas Sommos — Runway y Dashboard"
+  short_description: "Calcula y audita cash, burn, runway, proyección mensual y KPIs ejecutivos de Sommos."
+  brand_color: "#4D0B95"
+  default_prompt: "Usa $finanzas-runway-dashboard para revisar cash, burn, runway, proyección de caja y KPIs del Dashboard sin alterar datos fuente."
+
+policy:
+  allow_implicit_invocation: true
