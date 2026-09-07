@@ -1,67 +1,207 @@
-# Runway mensual
+# Runway Mensual
 
 ## Propósito
 
-Estimar cuántos meses puede operar Sommos con la caja disponible y los flujos proyectados.
+`Runway Mensual` proyecta la disponibilidad de caja de Sommos y estima cuántos meses puede operar la empresa con el nivel de burn observado.
 
-## Fuentes
+Archivo principal:
+- Spreadsheet ID: `1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E`
+- Hoja: `Runway Mensual`
 
-El runway debe construirse a partir de:
+## Fuente de verdad
 
-- `Bancos` → cash real disponible
-- `CxC` → cobros esperados
-- `CxP` → pagos comprometidos
-- `Transacciones` → burn histórico
-- `Runway Mensual` → proyección consolidada
+El runway debe alimentarse directamente de:
+
+- `Transacciones`
+- `Bancos`
+
+Puede consultar:
+
+- `Dashboard`
+- `Presupuesto`
+- `CxC Mensual`
+- `CxP Mensual`
+
+Las antiguas pestañas `CxC` y `CxP` ya no forman parte del modelo.
+
+## Estructura conceptual mensual
+
+La proyección considera:
+
+- Mes
+- Saldo inicial USD
+- Cobros esperados
+- Otros ingresos
+- Pagos comprometidos
+- Otros egresos
+- Flujo neto
+- Saldo final proyectado
+- Burn proyectado
+- Burn histórico promedio
+- Runway en meses
+- Comentarios
 
 ## Saldo inicial
 
-El saldo inicial debe provenir del último cierre bancario real disponible.
+Para el primer mes proyectado:
 
-No sustituir un cierre bancario real por una proyección.
+- utilizar el último cierre bancario real conciliado disponible.
+
+Para meses siguientes:
+
+`Saldo inicial mes N = Saldo final proyectado mes N-1`
+
+No utilizar CxC como saldo inicial.
 
 ## Cobros esperados
 
-Usar CxC pendientes cuya fecha de vencimiento caiga dentro del mes proyectado.
+Deben calcularse desde `Transacciones`.
 
-No incluir:
-- cuentas ya cobradas
-- grants aprobados sin desembolso exigible
-- ingresos sin fecha o compromiso suficientemente definido
+Condiciones:
+
+- Tipo = `Ingreso`
+- Estado = `Pendiente`
+- Fecha de vencimiento dentro del mes proyectado
+
+Utilizar `Monto USD`.
+
+Si una cuenta pendiente no tiene fecha de vencimiento, no asignarla arbitrariamente a un mes.
 
 ## Pagos comprometidos
 
-Usar CxP pendientes cuya fecha de vencimiento caiga dentro del mes proyectado.
+Deben calcularse desde `Transacciones`.
 
-Una obligación pendiente forma parte del forecast, pero no del burn realizado.
+Condiciones:
+
+- Tipo = `Egreso`
+- Estado = `Pendiente`
+- Fecha de vencimiento dentro del mes proyectado
+
+Utilizar `Monto USD`.
+
+No incluir una obligación futura que todavía no haya sido registrada o devengada salvo que el modelo la trate explícitamente como proyección.
+
+## Flujo neto
+
+Fórmula conceptual:
+
+`Cobros esperados + Otros ingresos - Pagos comprometidos - Otros egresos`
+
+## Saldo final proyectado
+
+Fórmula conceptual:
+
+`Saldo inicial + Flujo neto`
+
+Este saldo es una proyección.
+
+No debe confundirse con saldo bancario real.
 
 ## Burn histórico
 
-Usar movimientos que cumplan:
+El burn histórico debe calcularse a partir de movimientos realizados.
+
+Condiciones:
 
 - Tipo = `Egreso`
-- Estado pago = `Pagado/Cobrado`
-- excluir `Transferencias internas`
+- Estado = `Pagado/Cobrado`
+- excluir categoría `Transferencias internas`
 
-Calcular usando hasta los últimos tres meses reales disponibles anteriores al mes analizado, según la lógica vigente del Sheet.
+Utilizar hasta los últimos 3 meses reales disponibles anteriores al mes proyectado.
 
-## Fórmula conceptual
+Si hay menos de 3 meses completos, utilizar los meses disponibles e indicar la limitación.
 
-`Flujo neto = Cobros esperados + Otros ingresos - Pagos comprometidos - Otros egresos`
+## Runway
 
-`Saldo final = Saldo inicial + Flujo neto`
+Fórmula conceptual:
 
-`Runway = Saldo final / Burn histórico promedio`
+`Runway = Saldo disponible / Burn histórico promedio`
 
-## Limitaciones
+Aplicar únicamente si:
 
-El runway puede quedar distorsionado cuando:
+`Burn histórico promedio > 0`
 
-- faltan vencimientos en CxC
-- faltan vencimientos en CxP
-- no se han incluido gastos recurrentes futuros
-- faltan cierres bancarios
-- existe un burn histórico poco representativo
-- existen ingresos extraordinarios
+El runway debe expresarse en meses.
 
-Siempre explicar los supuestos relevantes.
+Si el burn es cero o no existe suficiente información, no inventar un resultado.
+
+## Grants
+
+Los grants requieren tratamiento especial.
+
+El monto total aprobado de un grant no equivale automáticamente a CxC.
+
+Solo debe entrar en runway cuando exista:
+
+- un desembolso registrado;
+- una cuenta por cobrar exigible;
+- una fecha esperada o de vencimiento suficientemente definida.
+
+Categoría conocida:
+
+`Other financing cash flow`
+
+No tratar grants automáticamente como ingresos operativos.
+
+## CxC y CxP mensuales
+
+`CxC Mensual` y `CxP Mensual` son vistas de control y presentación.
+
+Pueden contener:
+
+- histórico copiado de archivos anteriores;
+- meses recientes derivados de `Transacciones`.
+
+Para cálculo de runway utilizar preferentemente `Transacciones`, no los totales visuales de estas hojas.
+
+## Salarios
+
+Las pestañas:
+
+- `Sueldos 2026`
+- `CxP Sueldos`
+
+pueden utilizarse para analizar planificación de nómina y pasivos laborales.
+
+No duplicar un salario en runway si la obligación correspondiente ya existe como egreso pendiente en `Transacciones`.
+
+## Presupuesto
+
+`Presupuesto` puede utilizarse como referencia para escenarios futuros.
+
+No utilizar automáticamente el presupuesto como pago comprometido.
+
+Diferenciar:
+
+- presupuesto
+- obligación registrada
+- egreso realizado
+
+## Validación
+
+Cuando el runway cambie de forma significativa revisar:
+
+1. saldo bancario inicial;
+2. conciliación de bancos;
+3. CxC nuevas o modificadas;
+4. CxP nuevas o modificadas;
+5. fechas de vencimiento;
+6. grants;
+7. pagos realizados recientemente;
+8. burn histórico;
+9. transferencias internas;
+10. duplicados.
+
+## Principio central
+
+El runway es una estimación.
+
+Siempre distinguir entre:
+
+- cash real;
+- CxC;
+- CxP;
+- flujo comprometido;
+- flujo proyectado.
+
+No presentar una proyección como si fuera saldo bancario real.
