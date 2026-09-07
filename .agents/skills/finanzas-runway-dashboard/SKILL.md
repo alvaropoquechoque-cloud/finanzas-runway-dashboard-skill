@@ -1,51 +1,75 @@
 ---
 name: finanzas-runway-dashboard
-description: Calcula y audita cash, burn, runway, proyección mensual y KPIs ejecutivos de Sommos.
+description: Calcula y audita cash, burn, runway, proyección mensual y KPIs ejecutivos del modelo financiero de Sommos.
 ---
 
 # Finanzas Sommos — Runway y Dashboard
 
 ## Propósito
 
-Interpretar y auditar la capa ejecutiva del modelo financiero de Sommos.
+Analizar la posición financiera y la proyección de caja de Sommos usando como fuente principal el Google Sheet:
 
-Archivo principal:
 - Spreadsheet ID: `1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E`
 - URL: `https://docs.google.com/spreadsheets/d/1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E/edit`
 
-## Alcance principal
+Esta skill es principalmente analítica.
 
-Esta skill opera principalmente:
+No crear, duplicar ni modificar transacciones salvo que el usuario lo solicite expresamente y la operación haya sido validada.
+
+## Pestañas principales
+
+Opera principalmente sobre:
+
 - `Runway Mensual`
 - `Dashboard`
 
-También puede consultar:
-- `Bancos`
-- `CxC`
-- `CxP`
+Puede consultar:
+
 - `Transacciones`
+- `Bancos`
+- `CxC Mensual`
+- `CxP Mensual`
+- `Operative incomes`
+- `Real S&A`
 - `Presupuesto`
+- `Sueldos 2026`
+- `CxP Sueldos`
 
-Esta skill es principalmente analítica.
+## Fuente de verdad
 
-No debe crear o modificar transacciones salvo que el usuario lo solicite expresamente y el caso corresponda claramente a una operación financiera.
+`Transacciones` es la fuente de verdad operativa.
 
-## Runway mensual
+Las vistas mensuales y ejecutivas no deben convertirse en fuentes paralelas de movimientos.
 
-La proyección debe distinguir entre:
-- caja real
-- cobros esperados
-- pagos comprometidos
-- otros ingresos
-- otros egresos
-- flujo neto
-- saldo proyectado
-- burn histórico
-- runway
+En particular:
 
-## Estructura funcional conocida
+- `CxC Mensual` es una vista de control de cuentas por cobrar.
+- `CxP Mensual` es una vista de control de cuentas por pagar.
+- `Operative incomes` es una vista mensual de ingresos.
+- `Real S&A` es una vista mensual de gastos administrativos y comerciales.
+- `CxP Sueldos` controla pasivos y pagos relacionados con nómina.
+- `Bancos` representa caja real y conciliada.
 
-Campos principales:
+Si una vista contradice `Transacciones`, investigar la diferencia antes de modificar datos.
+
+## Arquitectura actual
+
+Las antiguas pestañas `CxC` y `CxP` fueron eliminadas.
+
+Por lo tanto:
+
+- `Runway Mensual` debe obtener cobros esperados directamente desde `Transacciones`.
+- `Runway Mensual` debe obtener pagos comprometidos directamente desde `Transacciones`.
+- `Dashboard` debe obtener CxC pendiente, CxP pendiente y vencimientos directamente desde `Transacciones`.
+
+No recrear dependencia con las antiguas pestañas `CxC` o `CxP`.
+
+## Runway Mensual
+
+La pestaña `Runway Mensual` proyecta la posición mensual de caja.
+
+Conceptos principales:
+
 - Mes
 - Saldo inicial USD
 - Cobros esperados CxC
@@ -56,59 +80,108 @@ Campos principales:
 - Saldo final USD
 - Burn proyectado USD
 - Burn histórico promedio
-- Runway en meses
+- Runway meses
 - Comentario
 
 ## Saldo inicial
 
-El saldo inicial debe provenir del último cierre bancario real disponible.
+Para el primer mes proyectado:
 
-No usar una proyección anterior como saldo real si existe un cierre bancario posterior.
+- usar el último cierre bancario real y conciliado disponible.
 
-## Cobros esperados
+Para meses posteriores:
 
-Los cobros esperados deben venir de `CxC` según fecha de vencimiento.
+`Saldo inicial mes N = Saldo final proyectado mes N-1`
 
-Solo incluir obligaciones todavía pendientes.
+No sustituir saldos bancarios reales por proyecciones cuando ya existe un cierre conciliado.
 
-CxC no equivale a cash disponible.
+## Cobros esperados CxC
 
-## Pagos comprometidos
+Fuente:
 
-Los pagos comprometidos deben venir de `CxP` según fecha de vencimiento.
+`Transacciones`
 
-Solo incluir obligaciones todavía pendientes.
+Condiciones conceptuales:
 
-CxP no equivale a egreso realizado.
+- Tipo = `Ingreso`
+- Estado pago = `Pendiente`
+- Fecha vencimiento dentro del mes proyectado
+
+La fecha de vencimiento determina el mes esperado de cobro.
+
+No tratar como CxC:
+
+- grants aprobados pero todavía no exigibles;
+- compromisos sin obligación de pago definida;
+- ingresos ya cobrados.
+
+## Pagos comprometidos CxP
+
+Fuente:
+
+`Transacciones`
+
+Condiciones conceptuales:
+
+- Tipo = `Egreso`
+- Estado pago = `Pendiente`
+- Fecha vencimiento dentro del mes proyectado
+
+No incluir como pago futuro un movimiento que ya se encuentre `Pagado/Cobrado`.
+
+## Realizado versus pendiente
+
+`Pagado/Cobrado` representa movimiento realizado.
+
+`Pendiente` representa obligación o derecho todavía no realizado.
+
+Por lo tanto:
+
+- CxC no es cash.
+- CxP no es egreso realizado.
+- Un pendiente no debe afectar directamente la caja bancaria.
+- Un movimiento realizado no debe permanecer simultáneamente como obligación pendiente.
 
 ## Burn histórico
 
-Para calcular burn histórico, usar movimientos de `Transacciones` que cumplan:
+El burn histórico debe calcularse utilizando movimientos reales:
 
 - Tipo = `Egreso`
 - Estado pago = `Pagado/Cobrado`
 - excluir `Transferencias internas`
 
-Usar hasta los últimos 3 meses reales disponibles anteriores al mes proyectado, según la lógica vigente en el Sheet.
+Usar hasta tres meses reales anteriores cuando exista suficiente información.
+
+No utilizar directamente:
+
+- presupuesto;
+- CxP pendiente;
+- saldo proyectado;
+- transferencias internas.
 
 ## Runway
 
 Fórmula conceptual:
 
-`Runway = Saldo disponible o proyectado / Burn histórico promedio`
+`Runway = Saldo disponible / Burn histórico promedio`
 
-Solo calcular cuando el burn histórico sea mayor que cero.
+cuando:
 
-El resultado es una aproximación y depende de:
-- saldo utilizado
-- burn utilizado
-- cobros esperados
-- pagos comprometidos
-- calidad de las fechas de vencimiento
+`Burn histórico promedio > 0`
+
+El runway debe interpretarse como una aproximación.
+
+Siempre distinguir entre:
+
+- runway basado en cash actual;
+- runway proyectado con CxC/CxP;
+- runway basado en supuestos futuros.
 
 ## Dashboard
 
-KPIs ejecutivos conocidos:
+El `Dashboard` resume KPIs ejecutivos.
+
+KPIs principales conocidos:
 
 - Cash disponible
 - CxC pendiente
@@ -119,48 +192,178 @@ KPIs ejecutivos conocidos:
 - CxC vencida
 - Presupuesto disponible
 
-## Regla de interpretación
+## Cash disponible
+
+Debe provenir de bancos/cuentas conciliadas.
+
+No sumar CxC pendiente al cash.
+
+No usar saldos proyectados como saldo bancario real.
+
+## CxC pendiente
+
+Calcular desde `Transacciones` considerando:
+
+- Tipo = `Ingreso`
+- Estado pago = `Pendiente`
+
+## CxP pendiente
+
+Calcular desde `Transacciones` considerando:
+
+- Tipo = `Egreso`
+- Estado pago = `Pendiente`
+
+Los pasivos de nómina pueden requerir consulta adicional a `CxP Sueldos` cuando se preparen estados financieros, pero no deben duplicarse si ya existen en `Transacciones`.
+
+## CxC vencida
+
+Debe considerar:
+
+- Tipo = `Ingreso`
+- Estado pago = `Pendiente`
+- Fecha vencimiento anterior a la fecha actual
+
+Una cuenta vencida sigue siendo CxC; no es pérdida automáticamente.
+
+## Ingresos
+
+Para análisis ejecutivo distinguir:
+
+### Ingresos operativos
+
+Consultar principalmente:
+
+- `Operative incomes`
+- `Transacciones`
+
+### Grants y financiamiento
+
+No confundir grants con ingresos operativos recurrentes.
+
+La categoría:
+
+`Other financing cash flow`
+
+debe analizarse separadamente cuando corresponda.
+
+## Gastos
+
+Para análisis de gastos consultar:
+
+- `Transacciones`
+- `Real S&A`
+- `Sueldos 2026`
+- `CxP Sueldos`
 
 No confundir:
 
-- Cash con CxC
-- CxP con gasto realizado
-- Presupuesto con burn
-- Saldo proyectado con saldo bancario real
-- Grant aprobado con CxC exigible
+- gasto real;
+- obligación pendiente;
+- presupuesto;
+- pago bancario;
+- transferencia interna.
 
-## Auditoría de KPIs
+## Presupuesto
+
+`Presupuesto` sirve para comparar Budget versus ejecución.
+
+No utilizar el total del P&L presupuestario automáticamente como burn total.
+
+Puede haber categorías de `Transacciones` que no estén representadas en la matriz visible del presupuesto.
+
+## Conciliación bancaria
+
+Antes de utilizar cash para análisis ejecutivo:
+
+- comprobar que el cierre bancario esté conciliado;
+- revisar diferencias;
+- no corregir saldos artificialmente;
+- investigar movimientos faltantes o duplicados.
+
+Solo movimientos realizados deben afectar bancos.
+
+## Estados financieros
+
+Esta skill puede apoyar la preparación futura de:
+
+- Estado de Resultados
+- Balance General
+- Flujo de Caja
+
+Pero no debe confundir las vistas administrativas actuales con estados financieros contables completos.
+
+Fuentes conceptuales:
+
+### Estado de Resultados
+- ingresos operativos;
+- grants según tratamiento contable definido;
+- Real S&A;
+- nómina;
+- otros gastos e ingresos.
+
+### Balance General
+- Bancos;
+- CxC;
+- CxP;
+- CxP Sueldos;
+- otros activos y pasivos disponibles.
+
+### Flujo de Caja
+- movimientos efectivamente realizados;
+- bancos;
+- clasificación operativa, inversión y financiamiento cuando corresponda.
+
+Antes de construir estados financieros formales se debe definir tratamiento contable y criterios de devengamiento.
+
+## Auditoría de un KPI inesperado
 
 Si un KPI parece incorrecto:
 
-1. identificar la fórmula;
-2. identificar la pestaña fuente;
-3. revisar filtros y criterios;
-4. validar las transacciones origen;
-5. revisar fechas;
-6. revisar estado de pago;
-7. revisar TC;
-8. corregir la fuente, no el KPI directamente.
+1. revisar la fórmula;
+2. identificar su fuente;
+3. revisar filtros y fechas;
+4. comparar con `Transacciones`;
+5. comprobar estado `Pendiente` versus `Pagado/Cobrado`;
+6. revisar vencimientos;
+7. revisar conciliación bancaria;
+8. revisar TC;
+9. buscar duplicados;
+10. corregir el dato aguas arriba, no el KPI directamente.
 
-## Proyecciones
+## Tipo de cambio
 
-Toda proyección debe dejar claros sus supuestos.
+Respetar las reglas definidas en la skill de Transacciones y TC.
 
-Si faltan:
-- fechas de vencimiento
-- gastos recurrentes futuros
-- ingresos previstos
-- saldos bancarios actualizados
+Reglas conocidas:
 
-debe indicarse que el runway puede estar incompleto o subestimado/sobrestimado.
+- USD → 1
+- SOL → 0.28
+- BOB → TC oficial BCB según fecha
+- otras monedas → TC manual cuando corresponda
 
-## Reglas transversales obligatorias
+No reemplazar arbitrariamente el TC utilizado por `Transacciones`.
 
-- El Google Sheet `Finanzas Sommos — Workflow y Control` es la fuente viva.
-- `Transacciones` es la fuente de verdad operativa.
-- Antes de concluir o modificar, leer en vivo las fuentes relevantes.
+## Validaciones obligatorias
+
+Antes de modificar fórmulas de Runway o Dashboard:
+
+1. leer encabezados actuales;
+2. leer fórmulas actuales;
+3. identificar dependencias;
+4. comprobar que no existan errores previos;
+5. comparar resultados antes y después;
+6. verificar `Transacciones`;
+7. verificar `Bancos`;
+8. buscar `#REF!`, `#VALUE!`, `#N/A` y `#ERROR!`.
+
+## Reglas transversales
+
+- El Google Sheet vivo prevalece sobre snapshots almacenados en GitHub.
 - Nunca asumir posiciones históricas de columnas.
-- Nunca inventar ingresos o egresos para completar una proyección.
-- Distinguir siempre datos reales de datos proyectados.
-- Después de cualquier modificación, verificar Dashboard y Runway.
-- Los snapshots en GitHub documentan contexto; si contradicen el Sheet, prevalece el Sheet.
+- Leer el Sheet antes de escribir.
+- No duplicar transacciones.
+- No inventar fechas, cuentas, responsables o movimientos.
+- No crear movimientos para hacer cuadrar bancos o KPIs.
+- Mantener trazabilidad entre dato fuente y vista ejecutiva.
+- Explicar claramente si una cifra es real, pendiente, presupuestada o proyectada.
