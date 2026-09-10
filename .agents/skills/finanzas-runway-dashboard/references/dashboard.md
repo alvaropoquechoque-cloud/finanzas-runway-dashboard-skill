@@ -1,179 +1,493 @@
-# Dashboard
+# Finanzas Sommos — Dashboard
 
 ## Propósito
 
-El `Dashboard` es la capa ejecutiva del modelo financiero de Sommos.
+Documentar la lógica del Dashboard ejecutivo de Sommos.
 
-Resume indicadores para toma de decisiones, pero no debe utilizarse como fuente primaria para registrar o corregir información.
+Esta referencia pertenece a:
 
-Archivo principal:
-- Spreadsheet ID: `1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E`
-- Hoja: `Dashboard`
+`finanzas-runway-dashboard`
 
-## Fuentes principales
+La pestaña principal es:
 
-El Dashboard debe alimentarse principalmente de:
+`Dashboard`
 
-- `Transacciones`
-- `Bancos`
-- `Runway Mensual`
-- `Presupuesto`
+---
 
-Puede utilizar vistas auxiliares para análisis:
+# Objetivo
 
-- `CxC Mensual`
-- `CxP Mensual`
-- `Operative incomes`
-- `Real S&A`
-- `CxP Sueldos`
-- `Sueldos 2026`
+El Dashboard debe permitir entender rápidamente:
 
-Estas vistas auxiliares no sustituyen a `Transacciones` como fuente de verdad operativa.
+- liquidez;
+- runway;
+- capital de trabajo;
+- desempeño;
+- forecast;
+- riesgos;
+- estado del cierre.
 
-## KPIs principales
+No debe reemplazar los estados financieros.
 
-Indicadores conocidos:
+---
+
+# Principio fundamental
+
+Cada KPI debe tener:
+
+- una fuente clara;
+- un periodo claro;
+- una definición clara.
+
+No reconstruir lógica contable compleja dentro del Dashboard si ya existe una fuente oficial.
+
+---
+
+# Bloque Liquidez y Runway
+
+Puede incluir:
 
 - Cash disponible
-- CxC pendiente
-- CxP pendiente
-- Ingresos del último mes con datos
-- Burn del último mes con datos
-- Runway en meses
-- CxC vencida
-- Presupuesto disponible
+- Core Burn
+- Runway Cash
+- Primer mes negativo
 
-## Cash disponible
+---
 
-El cash debe representar dinero real disponible.
+# Cash disponible
 
-Fuente preferida:
+Fuente principal:
 
-- último cierre bancario conciliado de `Bancos`
+`Balance Sheet`
 
-No sumar CxC al cash.
+respaldada para histórico por:
 
-No considerar ingresos pendientes como efectivo disponible.
+`Bancos`
 
-## CxC pendiente
+No sumar:
 
-Debe calcularse directamente desde `Transacciones`.
+- CxC;
+- grants futuros;
+- financiamiento no recibido.
 
-Condiciones conceptuales:
+---
 
-- Tipo = `Ingreso`
-- Estado pago = `Pendiente`
+# Core Burn
 
-El total representa derechos de cobro registrados, no caja.
+Fuente:
 
-## CxP pendiente
+`Runway Mensual`
 
-Debe calcularse directamente desde `Transacciones`.
+La metodología subyacente debe provenir de:
 
-Condiciones conceptuales:
+- Real S&A;
+- Sueldos 2026;
 
-- Tipo = `Egreso`
-- Estado pago = `Pendiente`
+según la lógica vigente.
 
-Representa obligaciones registradas pendientes de pago.
+---
 
-## CxC vencida
+# Runway
 
-Debe considerar únicamente:
+Mostrar claramente qué definición se utiliza.
 
-- Tipo = `Ingreso`
-- Estado = `Pendiente`
-- Fecha de vencimiento anterior a la fecha actual
+Preferir que la tarjeta principal identifique:
 
-Una CxC sin fecha de vencimiento no debe clasificarse automáticamente como vencida.
+`Runway sobre caja disponible`
 
-## Ingresos
+si utiliza:
 
-Para indicadores de ingresos realizados utilizar movimientos:
+`Cash / Core Burn`
 
-- Tipo = `Ingreso`
-- Estado = `Pagado/Cobrado`
+---
 
-Distinguir ingresos operativos de:
+# Primer mes negativo
 
-- grants
-- intereses
-- otros ingresos
-- financiamiento
+Fuente:
 
-`Other financing cash flow` no debe tratarse automáticamente como ingreso operativo.
+`Runway Mensual`
 
-## Burn
+Debe corresponder al escenario Base salvo que se etiquete otro escenario.
 
-El burn debe provenir de egresos realmente realizados.
+---
 
-Considerar:
+# Bloque Capital de Trabajo
 
-- Tipo = `Egreso`
-- Estado = `Pagado/Cobrado`
+Puede incluir:
 
-Excluir:
+- CxC clientes
+- Grants por cobrar
+- CxP proveedores
+- CxP Sueldos
+- Cobros próximos 30 días
+- Pagos próximos 30 días
 
-- `Transferencias internas`
+---
 
-El presupuesto no sustituye al burn.
+# CxC clientes
 
-`Real S&A` puede utilizarse para análisis de gasto operativo, pero no necesariamente contiene todos los egresos del negocio.
+Fuente:
 
-## Presupuesto disponible
+`CxC Mensual`
 
-Debe provenir de `Presupuesto`.
+No usar directamente:
 
-La lógica conceptual es:
+`Ingreso Pendiente en Transacciones`
 
-`Presupuesto total - ejecución real`
+como sustituto.
 
-No confundir presupuesto disponible con cash disponible.
+---
 
-## Vistas históricas
+# Grants por cobrar
 
-Algunas pestañas mensuales contienen información histórica cargada desde archivos financieros anteriores.
+Fuente:
 
-Actualmente pueden existir periodos históricos manuales y periodos recientes conectados a `Transacciones`.
+bloque de grants en:
 
-Ejemplos:
+`CxC Mensual`
 
-- `Operative incomes`
-- `Real S&A`
-- `CxC Mensual`
-- `CxP Mensual`
+Mantener separado de clientes operativos.
 
-Estas vistas sirven para continuidad histórica y presentación.
+---
 
-Si existe una diferencia entre una vista histórica y la fuente operativa actual, señalarla y no modificar datos silenciosamente.
+# CxP proveedores
 
-## Auditoría de un KPI
+Fuente:
 
-Si un indicador parece incorrecto:
+`CxP Mensual`
 
-1. revisar la fórmula del KPI;
-2. identificar la fuente;
-3. revisar los filtros y criterios;
-4. validar las transacciones relacionadas;
-5. revisar estados `Pendiente` vs `Pagado/Cobrado`;
-6. revisar fechas de vencimiento y pago;
-7. revisar banco y conciliación si afecta cash;
-8. revisar TC cuando corresponda;
-9. corregir el problema aguas arriba.
+---
 
-Nunca corregir manualmente un KPI para hacerlo coincidir con una cifra esperada.
+# CxP Sueldos
 
-## Principio central
+Fuente:
 
-El Dashboard resume.
+`CxP Sueldos`
 
-No registra operaciones.
+No duplicar dentro de CxP proveedores si se muestran ambos indicadores.
 
-No reemplaza a:
+---
 
-- `Transacciones`
-- `Bancos`
-- `Presupuesto`
-- `Runway Mensual`
+# Cobros próximos 30 días
 
-Si una cifra del Dashboard está mal, corregir primero la fuente que la genera.
+Debe utilizar el calendario oficial de cobros.
+
+Fuente principal:
+
+- CxC Mensual;
+- vencimientos/documentación relacionados.
+
+Ventana:
+
+`TODAY() → TODAY()+30`
+
+No incluir derechos ya cobrados.
+
+---
+
+# Pagos próximos 30 días
+
+Debe utilizar:
+
+- CxP Mensual;
+- CxP Sueldos;
+- calendarios/vencimientos.
+
+No duplicar obligaciones.
+
+---
+
+# Bloque Desempeño
+
+Puede incluir:
+
+- ingresos;
+- EBITDA;
+- resultado neto;
+- Budget vs Actual.
+
+---
+
+# Ingresos
+
+Fuente:
+
+`Real P&L`
+
+Utilizar el periodo cerrado correspondiente.
+
+No utilizar cobros.
+
+---
+
+# EBITDA
+
+Fuente:
+
+`Real P&L`
+
+No recalcular con una definición distinta.
+
+---
+
+# Resultado neto
+
+Fuente:
+
+`Real P&L`
+
+No confundir con cambio neto de caja.
+
+---
+
+# Budget vs Actual
+
+Fuente:
+
+`Presupuesto`
+
+y lógica de:
+
+`finanzas-presupuesto-vs`
+
+Debe comparar Budget contra P&L, no contra cash.
+
+---
+
+# Bloque Forecast y Alertas
+
+Puede incluir:
+
+- caja Dic-26;
+- caja mínima;
+- CxC vencida;
+- CxP total;
+- checks financieros;
+- escenarios.
+
+---
+
+# Caja futura
+
+Fuente:
+
+`Runway Mensual`
+
+No mantener otra proyección independiente dentro del Dashboard.
+
+---
+
+# CxC vencida
+
+Debe representar saldo pendiente vencido.
+
+No confundir vencido con incobrable.
+
+---
+
+# Checks
+
+Mostrar de forma resumida:
+
+- Modelo de 3 estados
+- Cash Flow vs Balance Sheet
+
+La lógica completa pertenece a:
+
+`finanzas-estados-financieros`
+
+---
+
+# Cierre mensual
+
+El Dashboard puede mostrar:
+
+- Último mes cerrado
+- Bancos cerrados
+- Por categorizar
+- Sin conciliar
+- Estado cierre
+
+La lógica completa pertenecerá a:
+
+`finanzas-cierre-mensual`
+
+---
+
+# Estado cierre
+
+Mostrar:
+
+`✓ CERRADO`
+
+solo cuando los criterios aplicables estén correctos.
+
+Si no:
+
+`⚠ REVISAR`
+
+No usar únicamente color.
+
+El texto debe ser autoexplicativo.
+
+---
+
+# Último mes cerrado
+
+No depende simplemente del mes calendario.
+
+Debe corresponder al último periodo completamente validado.
+
+---
+
+# Bancos cerrados
+
+Mostrar:
+
+`Bancos conciliados / Bancos activos`
+
+No hardcodear permanentemente un denominador fijo.
+
+---
+
+# Por categorizar
+
+Fuente:
+
+`Transacciones`
+
+Debe reflejar movimientos que requieren clasificación.
+
+Para un cierre ideal:
+
+`0`
+
+---
+
+# Sin conciliar
+
+Fuente:
+
+controles de conciliación.
+
+No confundir con pagos pendientes.
+
+Para un cierre ideal:
+
+`0`
+
+---
+
+# Alertas
+
+Una alerta puede activarse por:
+
+- runway bajo;
+- cash negativo;
+- CxC vencida;
+- pagos próximos elevados;
+- check financiero fallando;
+- bancos abiertos;
+- movimientos por categorizar;
+- movimientos sin conciliar.
+
+---
+
+# Colores
+
+Usar colores para ayudar, no para ocultar lógica.
+
+Preferir:
+
+- morado para estructura;
+- neutros para información;
+- rojo/alerta para problemas;
+- verde/OK cuando corresponda.
+
+No depender exclusivamente del color.
+
+---
+
+# Densidad
+
+No agregar demasiadas tarjetas.
+
+El Dashboard debe responder preguntas, no replicar todas las pestañas.
+
+Antes de añadir un KPI preguntar:
+
+**¿qué decisión mejora esta métrica?**
+
+---
+
+# Periodo
+
+Los KPIs de Actual deben utilizar un periodo consistente.
+
+Preferir:
+
+`último mes cerrado`
+
+No mezclar agosto cerrado con septiembre parcial sin indicarlo.
+
+---
+
+# Forecast
+
+Etiquetar claramente cualquier cifra proyectada.
+
+No presentarla como cash real.
+
+---
+
+# Gráficos
+
+Los gráficos deben:
+
+- ser simples;
+- tener unidades claras;
+- representar datos ya validados;
+- complementar, no reemplazar, KPIs.
+
+---
+
+# QA
+
+Después de modificar Dashboard comprobar:
+
+- fuentes;
+- periodos;
+- Cash;
+- Core Burn;
+- Runway;
+- CxC;
+- CxP;
+- próximos 30 días;
+- Revenue;
+- EBITDA;
+- Net Income;
+- Budget;
+- caja forecast;
+- checks;
+- cierre;
+- gráfico.
+
+Buscar errores de fórmula.
+
+---
+
+# Guardrails
+
+- No hardcodear OK.
+- No hardcodear CERRADO.
+- No reconstruir estados financieros.
+- No sumar CxC al cash.
+- No usar cash como revenue.
+- No mezclar Actual y Forecast sin etiqueta.
+- No ocultar alertas.
+- No usar KPIs duplicados sin propósito.
+
+---
+
+# Regla final
+
+El Dashboard debe permitir entender el estado financiero de Sommos en segundos sin sacrificar la precisión del modelo.
