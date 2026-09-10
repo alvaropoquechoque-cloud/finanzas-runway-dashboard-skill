@@ -1,271 +1,439 @@
-# Interpretación financiera
+# Finanzas Sommos — Interpretación ejecutiva
 
 ## Propósito
 
-Definir reglas comunes para interpretar correctamente las cifras del modelo financiero de Sommos.
+Definir cómo interpretar y comunicar los KPIs de:
 
-Estas reglas deben aplicarse al revisar:
+- Runway Mensual
+- Dashboard
 
-- `Dashboard`
-- `Runway Mensual`
-- `Transacciones`
-- `Bancos`
-- `CxC Mensual`
-- `CxP Mensual`
-- `Operative incomes`
-- `Real S&A`
-- `Presupuesto`
-- `Sueldos 2026`
-- `CxP Sueldos`
+Esta referencia pertenece a:
 
-## Fuente principal
+`finanzas-runway-dashboard`
 
-`Transacciones` es la fuente de verdad operativa.
+Su objetivo es evitar conclusiones incorrectas a partir de métricas aisladas.
 
-Las demás pestañas:
+---
 
-- resumen;
-- proyectan;
-- agrupan;
-- concilian;
-- presentan información.
+# Cash
 
-No deben crear una versión independiente de la misma operación.
+Cash representa dinero disponible o equivalente según la metodología del modelo.
 
-## Cash
-
-Cash significa dinero real disponible.
-
-La referencia principal debe ser el último saldo bancario conciliado.
-
-No sumar automáticamente:
+No incluye automáticamente:
 
 - CxC;
 - grants futuros;
 - presupuesto;
-- proyecciones.
+- revenue devengado;
+- financiamiento no recibido.
 
-## CxC
+---
 
-CxC significa dinero registrado pendiente de cobrar.
+# Cash bajo no implica automáticamente insolvencia
 
-En `Transacciones`:
+Debe analizarse junto con:
 
-- Tipo = `Ingreso`
-- Estado = `Pendiente`
-
-CxC no es cash.
-
-Una cuenta por cobrar deja de estar pendiente cuando se registra correctamente el cobro.
-
-## CxP
-
-CxP significa obligación registrada pendiente de pago.
-
-En `Transacciones`:
-
-- Tipo = `Egreso`
-- Estado = `Pendiente`
-
-CxP no es un egreso realizado hasta que ocurre el pago.
-
-## Realizado
-
-Un movimiento realizado debe tener estado:
-
-`Pagado/Cobrado`
-
-Solo movimientos realizados deben afectar directamente:
-
-- caja;
-- conciliación bancaria;
-- ingresos realizados;
-- gastos realizados;
-- burn histórico.
-
-## Fecha de pago o cobro
-
-Cuando una factura tiene una fecha de emisión/vencimiento distinta a la fecha bancaria del pago, conservar ambas.
-
-La columna `Fecha pago / cobro` permite registrar cuándo ocurrió realmente el movimiento bancario sin perder la fecha original de la obligación.
-
-## Transferencias internas
-
-Las transferencias entre cuentas de Sommos no son ingresos ni gastos.
-
-Categoría:
-
-`Transferencias internas`
-
-Deben indicar correctamente:
-
-- Cuenta origen
-- Cuenta destino
-
-El movimiento debe afectar los bancos involucrados pero no el P&L ni el burn.
-
-No utilizar transferencias internas para cuadrar artificialmente una conciliación.
-
-## Bancos
-
-Los saldos bancarios deben reconciliarse con movimientos realizados.
-
-Fórmula conceptual:
-
-`Saldo final calculado = Saldo inicial + Ingresos - Egresos`
-
-Luego:
-
-`Diferencia = Saldo final banco - Saldo final calculado`
-
-Una diferencia debe investigarse.
-
-Nunca inventar una transacción para hacer que la diferencia sea cero.
-
-## Ingresos operativos
-
-`Operative incomes` presenta ingresos por cliente y mes.
-
-Debe distinguir:
-
-- ingresos operativos;
+- cobros próximos;
+- pagos próximos;
 - grants;
-- otros ingresos;
-- intereses.
+- financiamiento;
+- runway;
+- obligaciones.
 
-Algunos meses históricos fueron cargados desde archivos financieros anteriores.
+---
 
-Los meses recientes pueden derivarse de `Transacciones`.
+# Runway Cash
 
-No utilizar esta vista como sustituto del registro transaccional.
+`Cash / Core Burn`
 
-## Real S&A
+Responde:
 
-`Real S&A` presenta gastos administrativos y operativos por concepto y mes.
+**¿cuántos meses cubre la caja actual si mantenemos este burn y no consideramos nuevas entradas?**
 
-Puede contener histórico proveniente de archivos anteriores y periodos recientes derivados de `Transacciones`.
+Es una métrica conservadora.
 
-No asumir que el total de `Real S&A` equivale automáticamente al burn total.
+---
 
-Puede haber otros egresos fuera de esta matriz.
+# Runway Forecast
 
-## Sueldos
+Responde:
 
-`Sueldos 2026` representa principalmente planificación y estructura de nómina.
+**¿cuándo cruza cero la caja bajo el escenario completo?**
 
-`CxP Sueldos` representa obligaciones, adelantos, pagos y saldos relacionados con personal.
+Incluye:
 
-Distinguir:
+- ingresos;
+- cobros;
+- pagos;
+- grants;
+- financiamiento;
+- otros flujos del forecast.
 
-- sueldo presupuestado;
-- sueldo devengado;
-- sueldo pendiente;
-- sueldo pagado.
+---
 
-No duplicar obligaciones salariales entre `CxP Sueldos` y `Transacciones`.
+# Por qué dos runways pueden diferir
 
-## Presupuesto
+Es completamente posible que:
 
-Presupuesto significa autorización o planificación financiera.
+`Runway Cash = 0.5 meses`
 
-No equivale a cash.
+pero:
 
-No equivale a gasto realizado.
+`Runway Forecast > 0.5 meses`
 
-La comparación conceptual es:
+si existen cobros previstos.
 
-`Real vs Budget`
+No es una contradicción.
 
-Una desviación presupuestaria no implica necesariamente un problema de caja.
+Son preguntas diferentes.
 
-## Burn
+---
 
-Burn representa egresos reales de operación.
+# Core Burn
 
-Debe calcularse desde movimientos realizados.
+Debe interpretarse como costo recurrente de operación.
 
-Excluir:
+No necesariamente coincide con:
 
-`Transferencias internas`
+- total de egresos bancarios;
+- total de P&L;
+- net cash burn.
 
-No usar presupuesto como burn.
+---
 
-No usar CxP pendiente como burn realizado.
+# Net Burn
 
-## Grants
+Cuando se use:
 
-Distinguir:
+debe definirse claramente.
 
-- grant aprobado;
-- grant recibido;
-- grant pendiente;
-- desembolso exigible.
+Puede significar:
 
-El total aprobado no debe registrarse automáticamente como CxC.
+`Cash outflows - cash inflows`
 
-Un grant debe incorporarse a CxC o runway únicamente cuando exista una obligación de desembolso identificable.
+u otra metodología.
 
-## Histórico vs actual
+No utilizar el término “burn” sin indicar qué cálculo representa.
 
-Algunas vistas contienen información histórica proveniente de PDFs o modelos anteriores.
+---
 
-Estas cifras deben conservarse como histórico cuando sean necesarias para continuidad financiera.
+# CxC
 
-Si un dato histórico contradice una transacción bancaria o un registro reciente, no modificarlo silenciosamente.
+CxC representa dinero que Sommos tiene derecho a cobrar.
 
-Se debe identificar:
+No es cash.
 
-- fuente histórica;
-- dato actual;
-- diferencia;
-- tratamiento propuesto.
+Una CxC elevada puede ser:
 
-## Actual, comprometido y proyectado
+- normal;
+- señal de crecimiento;
+- riesgo de cobranza;
+- problema de timing.
 
-Toda interpretación financiera debe distinguir explícitamente entre:
+Debe analizarse con aging.
 
-**Actual**
-- ocurrió;
-- fue pagado/cobrado;
-- puede afectar banco.
+---
 
-**Comprometido**
-- existe obligación o derecho;
-- todavía está pendiente;
-- corresponde a CxC o CxP.
+# CxC vencida
 
-**Proyectado**
-- expectativa futura;
-- presupuesto;
+Una CxC vencida merece atención porque el cobro no ocurrió en la fecha esperada.
+
+Pero:
+
+`vencido ≠ incobrable`
+
+No provisionar o dar de baja automáticamente desde el Dashboard.
+
+---
+
+# CxP
+
+CxP representa obligaciones pendientes.
+
+No es equivalente al gasto del mes.
+
+Una CxP alta puede reflejar:
+
+- timing de pagos;
+- acumulación operativa;
+- retrasos;
+- proveedores importantes.
+
+---
+
+# CxP Sueldos
+
+Debe tratarse con especial atención por su prioridad operativa.
+
+No mezclarla conceptualmente con proveedores ordinarios cuando el Dashboard la separa.
+
+---
+
+# Cobros próximos 30 días
+
+Indica cash esperado de corto plazo.
+
+No debe interpretarse como cash garantizado.
+
+Analizar:
+
+- vencimiento;
+- calidad del deudor;
+- historial;
+- grants;
+- riesgo de retraso.
+
+---
+
+# Pagos próximos 30 días
+
+Representa presión de liquidez inmediata.
+
+Debe compararse contra:
+
+- cash actual;
+- cobros próximos;
+- financiamiento;
+- reservas.
+
+---
+
+# Cobros vs pagos próximos
+
+Si:
+
+`Pagos próximos > Cobros próximos`
+
+existe presión neta de caja.
+
+Pero el análisis debe considerar también:
+
+`Cash actual`
+
+No concluir insolvencia solo por esa comparación.
+
+---
+
+# Revenue
+
+Revenue del Dashboard viene de P&L.
+
+No significa necesariamente cash recibido.
+
+---
+
+# EBITDA
+
+Sirve para evaluar desempeño operativo según la definición del modelo.
+
+Un EBITDA negativo no significa automáticamente que la caja cayó en el mismo importe.
+
+Capital de trabajo y financiamiento pueden modificar cash.
+
+---
+
+# Resultado neto
+
+Incluye más elementos que EBITDA.
+
+Puede verse afectado por:
+
+- resultado financiero;
+- FX;
+- impuestos;
+- otras partidas.
+
+---
+
+# Budget vs Actual
+
+Una desviación debe interpretarse según tipo de cuenta.
+
+## Ingreso
+
+Actual > Budget
+→ generalmente favorable.
+
+## Gasto
+
+Actual > Budget
+→ generalmente desfavorable.
+
+No usar signo positivo/negativo sin contexto.
+
+---
+
+# Caja mínima
+
+Muestra el punto de mayor tensión dentro del horizonte.
+
+Es útil incluso si nunca cruza cero.
+
+---
+
+# Primer mes negativo
+
+Es una señal de planificación.
+
+No significa necesariamente que el evento vaya a ocurrir exactamente ese día.
+
+Depende de los supuestos del escenario.
+
+---
+
+# Escenario Sin Grants
+
+Mide dependencia de financiamiento no dilutivo/grants.
+
+Una caída fuerte frente al Base indica alta dependencia de esos desembolsos.
+
+---
+
+# Escenario Grants +1 mes
+
+Mide sensibilidad al timing.
+
+Puede ser especialmente relevante cuando el runway es corto.
+
+---
+
+# Escenarios no son predicciones
+
+Un escenario representa:
+
+**qué ocurre si estos supuestos se cumplen**
+
+No:
+
+**qué ocurrirá con certeza**
+
+Siempre comunicar la diferencia.
+
+---
+
+# Cierre mensual
+
+`✓ CERRADO`
+
+debe interpretarse como:
+
+- datos bancarios conciliados;
+- categorización completa;
+- modelo financiero consistente;
+- checks correctos;
+
+según los criterios de cierre vigentes.
+
+No significa que no pueda existir una corrección posterior con nueva evidencia.
+
+---
+
+# Checks del modelo
+
+`OK`
+
+significa que las relaciones financieras están dentro de tolerancia.
+
+No significa que toda clasificación económica sea necesariamente perfecta.
+
+Los checks matemáticos son necesarios, pero no sustituyen juicio contable.
+
+---
+
+# Alertas
+
+Una alerta debe provocar investigación, no una corrección automática.
+
+Ejemplo:
+
+`CxC vencida alta`
+
+→ revisar cuentas.
+
+No:
+
+→ eliminar la CxC.
+
+---
+
+# Materialidad
+
+Priorizar por:
+
+- impacto USD;
+- impacto en runway;
+- repetición;
+- probabilidad;
+- urgencia.
+
+No enfocarse excesivamente en centavos.
+
+---
+
+# Histórico vs Forecast
+
+Siempre indicar si una cifra es:
+
+- histórica;
+- actual;
 - forecast;
-- no necesariamente existe como obligación contable.
+- escenario.
 
-## Estados financieros
+Una cifra futura no debe presentarse con el mismo nivel de certeza que un saldo bancario conciliado.
 
-La estructura actual prepara información para construir posteriormente:
+---
 
-- Estado de Resultados
-- Balance General
-- Flujo de Caja
+# Comunicación ejecutiva
 
-Reglas generales:
+Una buena lectura del Dashboard debería poder resumirse en cuatro partes:
 
-- ingresos y gastos realizados alimentan resultados;
-- bancos alimentan efectivo;
-- CxC pendiente alimenta activos;
-- CxP pendiente alimenta pasivos;
-- CxP Sueldos puede alimentar pasivos laborales;
-- transferencias internas no generan resultado;
-- grants requieren clasificación según su naturaleza contable.
+1. Liquidez actual
+2. Riesgos próximos
+3. Desempeño económico
+4. Qué requiere acción
 
-Antes de construir estados financieros definitivos, validar criterios contables y periodificación.
+---
 
-## Principio final
+# Ejemplo conceptual
 
-Nunca interpretar una cifra únicamente por el nombre de la pestaña.
+Una interpretación útil sería:
 
-Rastrear siempre:
+`Cash actual bajo y runway cash corto. Los pagos próximos 30 días superan los cobros próximos, y el escenario sin grants deteriora significativamente la caja. Prioridad: cobranza, timing de grants y control de burn.`
 
-`Indicador → fórmula → fuente → transacción → banco/documento`
+No afirmar causalidad sin haber revisado las fuentes.
 
-Si existe una inconsistencia, corregir la fuente y permitir que las vistas derivadas se actualicen.
+---
+
+# Evitar alarmismo
+
+Un KPI rojo no significa automáticamente crisis.
+
+Debe contextualizarse con:
+
+- tendencia;
+- calendario;
+- financiamiento;
+- calidad de CxC;
+- flexibilidad de gasto.
+
+---
+
+# Evitar complacencia
+
+Un Dashboard con checks verdes tampoco implica que la liquidez sea saludable.
+
+Un modelo puede estar matemáticamente perfecto y mostrar un runway muy corto.
+
+---
+
+# Regla final
+
+Interpretar Dashboard y Runway requiere separar:
+
+**exactitud del modelo**
+
+de:
+
+**salud financiera de la empresa**
+
+Son dos preguntas distintas.
