@@ -1,207 +1,449 @@
-# Runway Mensual
+# Finanzas Sommos — Runway Mensual
 
 ## Propósito
 
-`Runway Mensual` proyecta la disponibilidad de caja de Sommos y estima cuántos meses puede operar la empresa con el nivel de burn observado.
+Documentar la lógica de proyección de caja y runway de Sommos.
 
-Archivo principal:
-- Spreadsheet ID: `1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E`
-- Hoja: `Runway Mensual`
+Esta referencia pertenece a:
 
-## Fuente de verdad
+`finanzas-runway-dashboard`
 
-El runway debe alimentarse directamente de:
+La pestaña principal es:
 
-- `Transacciones`
-- `Bancos`
+`Runway Mensual`
 
-Puede consultar:
+---
 
-- `Dashboard`
-- `Presupuesto`
+# Pregunta que responde
+
+Runway debe ayudar a responder:
+
+**¿Cuánto tiempo puede operar Sommos antes de quedarse sin caja bajo distintos escenarios?**
+
+No debe confundirse con una simple tabla de pendientes.
+
+---
+
+# Fuentes principales
+
+La lógica actual utiliza principalmente:
+
+- `Balance Sheet`
+- `Cash Flow`
+- `Real S&A`
+- `Sueldos 2026`
 - `CxC Mensual`
 - `CxP Mensual`
-
-Las antiguas pestañas `CxC` y `CxP` ya no forman parte del modelo.
-
-## Estructura conceptual mensual
-
-La proyección considera:
-
-- Mes
-- Saldo inicial USD
-- Cobros esperados
-- Otros ingresos
-- Pagos comprometidos
-- Otros egresos
-- Flujo neto
-- Saldo final proyectado
-- Burn proyectado
-- Burn histórico promedio
-- Runway en meses
-- Comentarios
-
-## Saldo inicial
-
-Para el primer mes proyectado:
-
-- utilizar el último cierre bancario real conciliado disponible.
-
-Para meses siguientes:
-
-`Saldo inicial mes N = Saldo final proyectado mes N-1`
-
-No utilizar CxC como saldo inicial.
-
-## Cobros esperados
-
-Deben calcularse desde `Transacciones`.
-
-Condiciones:
-
-- Tipo = `Ingreso`
-- Estado = `Pendiente`
-- Fecha de vencimiento dentro del mes proyectado
-
-Utilizar `Monto USD`.
-
-Si una cuenta pendiente no tiene fecha de vencimiento, no asignarla arbitrariamente a un mes.
-
-## Pagos comprometidos
-
-Deben calcularse desde `Transacciones`.
-
-Condiciones:
-
-- Tipo = `Egreso`
-- Estado = `Pendiente`
-- Fecha de vencimiento dentro del mes proyectado
-
-Utilizar `Monto USD`.
-
-No incluir una obligación futura que todavía no haya sido registrada o devengada salvo que el modelo la trate explícitamente como proyección.
-
-## Flujo neto
-
-Fórmula conceptual:
-
-`Cobros esperados + Otros ingresos - Pagos comprometidos - Otros egresos`
-
-## Saldo final proyectado
-
-Fórmula conceptual:
-
-`Saldo inicial + Flujo neto`
-
-Este saldo es una proyección.
-
-No debe confundirse con saldo bancario real.
-
-## Burn histórico
-
-El burn histórico debe calcularse a partir de movimientos realizados.
-
-Condiciones:
-
-- Tipo = `Egreso`
-- Estado = `Pagado/Cobrado`
-- excluir categoría `Transferencias internas`
-
-Utilizar hasta los últimos 3 meses reales disponibles anteriores al mes proyectado.
-
-Si hay menos de 3 meses completos, utilizar los meses disponibles e indicar la limitación.
-
-## Runway
-
-Fórmula conceptual:
-
-`Runway = Saldo disponible / Burn histórico promedio`
-
-Aplicar únicamente si:
-
-`Burn histórico promedio > 0`
-
-El runway debe expresarse en meses.
-
-Si el burn es cero o no existe suficiente información, no inventar un resultado.
-
-## Grants
-
-Los grants requieren tratamiento especial.
-
-El monto total aprobado de un grant no equivale automáticamente a CxC.
-
-Solo debe entrar en runway cuando exista:
-
-- un desembolso registrado;
-- una cuenta por cobrar exigible;
-- una fecha esperada o de vencimiento suficientemente definida.
-
-Categoría conocida:
-
-`Other financing cash flow`
-
-No tratar grants automáticamente como ingresos operativos.
-
-## CxC y CxP mensuales
-
-`CxC Mensual` y `CxP Mensual` son vistas de control y presentación.
-
-Pueden contener:
-
-- histórico copiado de archivos anteriores;
-- meses recientes derivados de `Transacciones`.
-
-Para cálculo de runway utilizar preferentemente `Transacciones`, no los totales visuales de estas hojas.
-
-## Salarios
-
-Las pestañas:
-
-- `Sueldos 2026`
 - `CxP Sueldos`
 
-pueden utilizarse para analizar planificación de nómina y pasivos laborales.
+Puede consultar adicionalmente:
 
-No duplicar un salario en runway si la obligación correspondiente ya existe como egreso pendiente en `Transacciones`.
+- `Bancos`
+- `Operative incomes`
+- `Presupuesto`
+- `Transacciones`
 
-## Presupuesto
+---
 
-`Presupuesto` puede utilizarse como referencia para escenarios futuros.
+# Principio fundamental
 
-No utilizar automáticamente el presupuesto como pago comprometido.
+El Runway es una vista derivada.
 
-Diferenciar:
+No debe convertirse en una fuente paralela de:
 
-- presupuesto
-- obligación registrada
-- egreso realizado
+- cash;
+- ingresos;
+- gastos;
+- CxC;
+- CxP.
 
-## Validación
+Si una cifra fuente es incorrecta:
 
-Cuando el runway cambie de forma significativa revisar:
+corregir aguas arriba.
 
-1. saldo bancario inicial;
-2. conciliación de bancos;
-3. CxC nuevas o modificadas;
-4. CxP nuevas o modificadas;
-5. fechas de vencimiento;
-6. grants;
-7. pagos realizados recientemente;
-8. burn histórico;
-9. transferencias internas;
-10. duplicados.
+---
 
-## Principio central
+# Caja inicial
 
-El runway es una estimación.
+La caja inicial debe partir del último saldo financiero confiable.
+
+Para histórico:
+
+preferir caja respaldada por:
+
+`Bancos`
+
+y presentada en:
+
+`Balance Sheet`
+
+Para forecast:
+
+utilizar la continuidad oficial del modelo.
+
+No sumar cuentas por cobrar al cash disponible.
+
+---
+
+# Forecast 2026
+
+Para los meses proyectados de 2026:
+
+usar principalmente el forecast oficial de:
+
+- `Cash Flow`
+- `Balance Sheet`
+
+No reconstruir el forecast únicamente desde transacciones pendientes.
+
+Esto permite incorporar correctamente:
+
+- devengos;
+- cobros;
+- pagos;
+- CxC;
+- CxP;
+- sueldos;
+- grants;
+- financiamiento.
+
+---
+
+# Proyección 2027
+
+Si el modelo de tres estados no llega con detalle completo a 2027:
+
+utilizar una metodología explícita.
+
+La metodología actual utiliza un:
+
+`Core Burn`
+
+para extender la proyección.
+
+No asumir gasto cero porque no existan transacciones pendientes futuras.
+
+---
+
+# Core Burn
+
+## Definición
+
+Core Burn representa el costo operativo recurrente mensual necesario para mantener la operación.
+
+Debe excluir, cuando corresponda:
+
+- grants;
+- financiamiento;
+- transferencias internas;
+- ingresos;
+- gastos extraordinarios no recurrentes.
+
+La composición vigente debe estar documentada.
+
+---
+
+# Base actual del Core Burn
+
+La lógica actual utiliza principalmente:
+
+`Real S&A`
++
+`Sueldos 2026`
+
+como base de costos recurrentes.
+
+Puede utilizarse el promedio mensual anual 2026 cuando se extiende la proyección más allá del detalle disponible.
+
+---
+
+# Gastos extraordinarios
+
+Antes de incluir una partida en el Core Burn revisar si es:
+
+- recurrente;
+- one-off;
+- legal;
+- viaje extraordinario;
+- proyecto puntual;
+- impuesto excepcional.
+
+No eliminar automáticamente una partida porque sea grande.
+
+No incluir automáticamente una partida porque haya ocurrido una vez.
+
+---
+
+# Runway sobre caja disponible
+
+Fórmula conceptual:
+
+`Runway Cash = Cash disponible / Core Burn mensual`
+
+cuando:
+
+`Core Burn > 0`
+
+Este KPI no incluye necesariamente cobros futuros.
+
+Debe interpretarse como una medición conservadora de supervivencia basada en caja actual.
+
+---
+
+# Runway según forecast
+
+Debe considerar el escenario completo.
+
+Puede expresarse mediante:
+
+- meses hasta caja negativa;
+- primer mes negativo;
+- caja mínima;
+- saldo final del horizonte.
+
+Este runway sí incorpora:
+
+- cobros futuros;
+- grants;
+- pagos;
+- financiamiento;
+- otros flujos incluidos en el escenario.
+
+---
+
+# No confundir tipos de runway
 
 Siempre distinguir entre:
 
-- cash real;
+## Runway Cash
+
+Cash actual / Core Burn.
+
+## Runway Base
+
+Runway según forecast oficial.
+
+## Runway Sin Grants
+
+Runway sin nuevos cobros de grants.
+
+Pueden mostrar resultados muy distintos y todos ser correctos.
+
+---
+
+# Escenario Base
+
+Debe utilizar:
+
+- forecast oficial;
+- grants en su calendario vigente;
+- ingresos proyectados;
+- gastos proyectados;
+- financiamiento vigente.
+
+No alterar supuestos silenciosamente.
+
+---
+
+# Escenario Sin Grants
+
+Debe eliminar únicamente los cobros futuros de grants.
+
+No debe modificar automáticamente:
+
+- gastos;
+- revenue;
+- financiamiento;
+- caja inicial.
+
+Sirve para medir dependencia de grants.
+
+---
+
+# Escenario Grants +1 mes
+
+Debe desplazar los grants un mes.
+
+Mantener:
+
+- mismo monto;
+- mismo número de desembolsos;
+- resto de supuestos constantes.
+
+Este escenario mide riesgo de timing.
+
+---
+
+# Primer mes negativo
+
+Debe identificar el primer periodo donde:
+
+`Cash < 0`
+
+Si no existe dentro del horizonte:
+
+mostrar claramente que no hay cash-out dentro del periodo proyectado.
+
+---
+
+# Caja mínima
+
+Mostrar:
+
+- importe mínimo;
+- mes correspondiente.
+
+Una caja muy baja puede ser relevante aunque no llegue a ser negativa.
+
+---
+
+# Horizonte de análisis
+
+Debe ser suficientemente largo para tomar decisiones.
+
+Evitar horizontes tan cortos que oculten un cash-out inmediato posterior.
+
+Evitar extender indefinidamente un burn constante como si fuera un forecast detallado.
+
+---
+
+# Grants
+
+Los grants deben tratarse según:
+
+- calendario;
+- probabilidad/supuesto vigente;
+- escenario.
+
+No sumar grants futuros al cash actual.
+
+---
+
+# Financiamiento
+
+El financiamiento solo debe entrar cuando forme parte explícita del escenario.
+
+No asumir una ronda o préstamo futuro sin soporte.
+
+---
+
+# Ingresos futuros
+
+Cuando exista forecast oficial:
+
+utilizarlo.
+
+No inventar crecimiento para mejorar runway.
+
+---
+
+# Pagos futuros
+
+Cuando exista schedule oficial:
+
+utilizarlo.
+
+No ignorar CxP o nómina simplemente porque no estén en Transacciones como pendientes.
+
+---
+
+# Caja negativa
+
+No sustituir caja negativa por cero.
+
+El objetivo del Runway es mostrar el momento en que la empresa cruza ese umbral.
+
+---
+
+# Visualización
+
+Runway debe ser fácil de leer.
+
+Puede incluir:
+
+- mes;
+- caja base;
+- caja sin grants;
+- caja grants +1 mes;
+- core burn;
+- primer mes negativo;
+- runway.
+
+No sobrecargar con cálculos técnicos que no aporten a la decisión.
+
+---
+
+# Gráfico
+
+El gráfico de escenarios debe:
+
+- utilizar el mismo horizonte;
+- utilizar la misma caja inicial;
+- mostrar claramente Base, Sin grants y Grants +1 mes;
+- mantener la misma unidad;
+- permitir identificar el cruce por cero.
+
+---
+
+# Actualización
+
+Después de modificar:
+
+- Operative incomes;
+- Real S&A;
+- Sueldos;
 - CxC;
 - CxP;
-- flujo comprometido;
-- flujo proyectado.
+- grants;
+- financiamiento;
 
-No presentar una proyección como si fuera saldo bancario real.
+el Runway debe recalcular correctamente.
+
+No hardcodear cifras para mantener un gráfico anterior.
+
+---
+
+# QA
+
+Comprobar:
+
+- caja inicial;
+- core burn;
+- escenario Base;
+- Sin grants;
+- Grants +1 mes;
+- caja mínima;
+- primer mes negativo;
+- runway cash;
+- continuidad mensual;
+- ausencia de errores.
+
+Buscar:
+
+- `#REF!`
+- `#VALUE!`
+- `#N/A`
+- `#DIV/0!`
+- `#ERROR!`
+
+---
+
+# Guardrails
+
+- No asumir burn cero.
+- No sumar CxC al cash.
+- No sumar grants futuros a cash actual.
+- No inventar financiamiento.
+- No inventar revenue.
+- No usar pendientes bancarios como único forecast.
+- No ocultar caja negativa.
+- No llamar runway a una cifra sin explicar su definición.
+- No modificar fuentes contables desde Runway para mejorar el resultado.
+
+---
+
+# Regla final
+
+Runway debe mostrar la realidad de liquidez bajo supuestos claros.
+
+No debe intentar producir una cifra tranquilizadora.
