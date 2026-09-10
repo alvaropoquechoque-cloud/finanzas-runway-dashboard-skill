@@ -1,369 +1,1337 @@
 ---
 name: finanzas-runway-dashboard
-description: Calcula y audita cash, burn, runway, proyección mensual y KPIs ejecutivos del modelo financiero de Sommos.
+description: Mantiene y audita el Runway Mensual y Dashboard ejecutivo de Sommos, integrando caja, core burn, escenarios, capital de trabajo, desempeño, próximos 30 días y controles de cierre del modelo financiero.
 ---
 
 # Finanzas Sommos — Runway y Dashboard
 
 ## Propósito
 
-Analizar la posición financiera y la proyección de caja de Sommos usando como fuente principal el Google Sheet:
+Gestionar la capa ejecutiva y prospectiva del workflow financiero de Sommos.
 
-- Spreadsheet ID: `1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E`
-- URL: `https://docs.google.com/spreadsheets/d/1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E/edit`
-
-Esta skill es principalmente analítica.
-
-No crear, duplicar ni modificar transacciones salvo que el usuario lo solicite expresamente y la operación haya sido validada.
-
-## Pestañas principales
-
-Opera principalmente sobre:
+Esta skill opera principalmente sobre:
 
 - `Runway Mensual`
 - `Dashboard`
 
-Puede consultar:
+Debe transformar el modelo financiero detallado en información útil para responder rápidamente:
 
-- `Transacciones`
+1. ¿Cuánta caja tiene Sommos?
+2. ¿Cuánto está quemando mensualmente?
+3. ¿Cuánto runway queda?
+4. ¿Cuándo podría volverse negativa la caja?
+5. ¿Qué debemos cobrar próximamente?
+6. ¿Qué debemos pagar próximamente?
+7. ¿Cómo estamos rindiendo frente al presupuesto?
+8. ¿El modelo financiero está correctamente cerrado?
+
+Esta skill es principalmente:
+
+- analítica;
+- ejecutiva;
+- prospectiva.
+
+No debe convertirse en una nueva fuente contable.
+
+---
+
+# Archivo principal
+
+Google Sheet:
+
+`Finanzas Sommos — Workflow y Control`
+
+Spreadsheet ID:
+
+`1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E`
+
+URL:
+
+`https://docs.google.com/spreadsheets/d/1RXy19WZMPQePflFaFeIIHnh09BpJbwOnk6Wumw8bW4E/edit`
+
+---
+
+# Pestañas principales
+
+Esta skill opera principalmente:
+
+- `Runway Mensual`
+- `Dashboard`
+
+Debe consultar según corresponda:
+
 - `Bancos`
+- `Balance Sheet`
+- `Cash Flow`
+- `Real P&L`
 - `CxC Mensual`
 - `CxP Mensual`
+- `CxP Sueldos`
 - `Operative incomes`
 - `Real S&A`
-- `Presupuesto`
 - `Sueldos 2026`
-- `CxP Sueldos`
+- `Presupuesto`
+- `Transacciones`
 
-## Fuente de verdad
+También puede consultar:
 
-`Transacciones` es la fuente de verdad operativa.
+- `Config`
+- `TC BCB`
 
-Las vistas mensuales y ejecutivas no deben convertirse en fuentes paralelas de movimientos.
+---
 
-En particular:
+# Principio fundamental
 
-- `CxC Mensual` es una vista de control de cuentas por cobrar.
-- `CxP Mensual` es una vista de control de cuentas por pagar.
-- `Operative incomes` es una vista mensual de ingresos.
-- `Real S&A` es una vista mensual de gastos administrativos y comerciales.
-- `CxP Sueldos` controla pasivos y pagos relacionados con nómina.
-- `Bancos` representa caja real y conciliada.
+Runway y Dashboard son:
 
-Si una vista contradice `Transacciones`, investigar la diferencia antes de modificar datos.
+**vistas derivadas**
 
-## Arquitectura actual
+No son fuentes originales del modelo.
 
-Las antiguas pestañas `CxC` y `CxP` fueron eliminadas.
+Si una cifra del Dashboard parece incorrecta:
 
-Por lo tanto:
+no corregir primero el Dashboard.
 
-- `Runway Mensual` debe obtener cobros esperados directamente desde `Transacciones`.
-- `Runway Mensual` debe obtener pagos comprometidos directamente desde `Transacciones`.
-- `Dashboard` debe obtener CxC pendiente, CxP pendiente y vencimientos directamente desde `Transacciones`.
+Identificar la fuente correcta aguas arriba.
 
-No recrear dependencia con las antiguas pestañas `CxC` o `CxP`.
+Ejemplos:
 
-## Runway Mensual
+Cash incorrecto
+→ revisar Bancos / Balance Sheet
 
-La pestaña `Runway Mensual` proyecta la posición mensual de caja.
+Revenue incorrecto
+→ revisar Real P&L / Operative incomes
 
-Conceptos principales:
+CxC incorrecta
+→ revisar CxC Mensual
 
-- Mes
-- Saldo inicial USD
-- Cobros esperados CxC
-- Otros ingresos USD
-- Pagos comprometidos CxP
-- Otros egresos USD
-- Flujo neto USD
-- Saldo final USD
-- Burn proyectado USD
-- Burn histórico promedio
-- Runway meses
-- Comentario
+CxP incorrecta
+→ revisar CxP Mensual / CxP Sueldos
 
-## Saldo inicial
+Runway incorrecto
+→ revisar Cash, core burn y escenario
 
-Para el primer mes proyectado:
+---
 
-- usar el último cierre bancario real y conciliado disponible.
+# Arquitectura actual
 
-Para meses posteriores:
+La arquitectura ejecutiva es:
 
-`Saldo inicial mes N = Saldo final proyectado mes N-1`
+`Bancos`
+→ cash histórico conciliado
 
-No sustituir saldos bancarios reales por proyecciones cuando ya existe un cierre conciliado.
+`Real P&L`
+→ desempeño económico
 
-## Cobros esperados CxC
+`CxC Mensual`
+→ cuentas por cobrar
 
-Fuente:
+`CxP Mensual`
++
+`CxP Sueldos`
+→ obligaciones por pagar
 
-`Transacciones`
+`Balance Sheet`
++
+`Cash Flow`
+→ forecast financiero oficial
 
-Condiciones conceptuales:
+`Real S&A`
++
+`Sueldos 2026`
+→ core burn
 
-- Tipo = `Ingreso`
-- Estado pago = `Pendiente`
-- Fecha vencimiento dentro del mes proyectado
+`Presupuesto`
+→ Budget vs Actual
 
-La fecha de vencimiento determina el mes esperado de cobro.
+Todo lo anterior alimenta:
 
-No tratar como CxC:
+`Runway Mensual`
+→ `Dashboard`
 
-- grants aprobados pero todavía no exigibles;
-- compromisos sin obligación de pago definida;
-- ingresos ya cobrados.
+---
 
-## Pagos comprometidos CxP
+# No reconstruir el modelo dentro del Dashboard
 
-Fuente:
+El Dashboard debe consumir resultados de fuentes ya validadas.
 
-`Transacciones`
+No replicar grandes fórmulas contables dentro del Dashboard si existe una fuente oficial.
 
-Condiciones conceptuales:
+Preferir:
 
-- Tipo = `Egreso`
-- Estado pago = `Pendiente`
-- Fecha vencimiento dentro del mes proyectado
+`Dashboard → Real P&L`
 
-No incluir como pago futuro un movimiento que ya se encuentre `Pagado/Cobrado`.
+en lugar de volver a reconstruir Revenue desde Operative incomes.
 
-## Realizado versus pendiente
+Preferir:
 
-`Pagado/Cobrado` representa movimiento realizado.
+`Dashboard → Balance Sheet`
 
-`Pendiente` representa obligación o derecho todavía no realizado.
+para caja de cierre cuando corresponda.
 
-Por lo tanto:
+Preferir:
 
-- CxC no es cash.
-- CxP no es egreso realizado.
-- Un pendiente no debe afectar directamente la caja bancaria.
-- Un movimiento realizado no debe permanecer simultáneamente como obligación pendiente.
+`Dashboard → CxC/CxP`
 
-## Burn histórico
+para capital de trabajo.
 
-El burn histórico debe calcularse utilizando movimientos reales:
+Esto reduce:
 
-- Tipo = `Egreso`
-- Estado pago = `Pagado/Cobrado`
-- excluir `Transferencias internas`
+- duplicación;
+- divergencias;
+- mantenimiento;
+- riesgo de errores.
 
-Usar hasta tres meses reales anteriores cuando exista suficiente información.
+---
 
-No utilizar directamente:
+# Runway Mensual
 
-- presupuesto;
-- CxP pendiente;
-- saldo proyectado;
-- transferencias internas.
+## Propósito
 
-## Runway
+`Runway Mensual` proyecta la evolución de caja y permite evaluar escenarios de liquidez.
+
+Debe distinguir claramente:
+
+- caja real;
+- forecast oficial;
+- core burn;
+- escenarios;
+- runway sobre caja actual;
+- runway proyectado.
+
+---
+
+# Referencia histórica
+
+El Runway del Control antiguo contenía conceptos útiles que deben conservarse conceptualmente:
+
+- Cash
+- Net Change
+- Grants
+- Financing
+- Core Burn
+- sensibilidades por retraso de grants
+
+El modelo nuevo mejora esta lógica utilizando los estados financieros ya construidos.
+
+---
+
+# Caja actual
+
+La caja actual debe provenir del último cierre financiero confiable.
+
+Prioridad conceptual:
+
+`Bancos conciliados`
+→ histórico
+
+y:
+
+`Balance Sheet`
+→ posición financiera oficial del cierre
+
+No sumar:
+
+- CxC;
+- grants futuros;
+- financiamiento no recibido;
+
+al cash disponible actual.
+
+---
+
+# Forecast 2026
+
+Para meses futuros de 2026:
+
+`Runway Mensual`
+
+debe utilizar principalmente el forecast oficial ya contenido en:
+
+- `Cash Flow`
+- `Balance Sheet`
+
+No reconstruir Sep–Dic únicamente desde filas `Pendiente` de `Transacciones`.
+
+La razón es que los estados financieros ya incorporan:
+
+- devengos;
+- CxC;
+- CxP;
+- sueldos;
+- grants;
+- financiamiento;
+- capital de trabajo.
+
+---
+
+# Proyección posterior a 2026
+
+Cuando el modelo de tres estados no contenga forecast completo para 2027:
+
+utilizar una metodología explícita y conservadora.
+
+La metodología actual utiliza un:
+
+`Core Burn`
+
+construido principalmente desde:
+
+- `Sueldos 2026`
+- `Real S&A`
+
+como base recurrente.
+
+Actualmente puede utilizarse el promedio mensual anual 2026 de esas fuentes para extender el escenario base de 2027.
+
+No asumir:
+
+`Burn 2027 = 0`
+
+simplemente porque no existan transacciones pendientes cargadas.
+
+---
+
+# Core Burn
+
+## Definición
+
+Core Burn representa el costo mensual recurrente necesario para mantener la operación.
+
+Debe distinguirse de:
+
+- gastos extraordinarios;
+- grants;
+- financiamiento;
+- transferencias internas;
+- movimientos puramente contables;
+- cash no recurrente.
+
+La metodología vigente debe estar documentada.
+
+---
+
+# Fuente de Core Burn
+
+La base actual utiliza principalmente:
+
+`Real S&A`
++
+`Sueldos 2026`
+
+No utilizar como única fuente:
+
+`Transacciones Pagadas`
+
+porque eso convierte el burn en una medición de timing bancario y no necesariamente de costo operativo recurrente.
+
+---
+
+# Gastos extraordinarios
+
+Antes de incluir un gasto grande dentro del Core Burn revisar si es:
+
+- recurrente;
+- one-off;
+- cierre legal;
+- viaje extraordinario;
+- impuesto excepcional;
+- proyecto específico.
+
+No inflar artificialmente el burn recurrente con un gasto que no se repetirá.
+
+Si la metodología viva ya incluye determinado gasto:
+
+preservarla hasta realizar un cambio explícito.
+
+---
+
+# Runway sobre caja disponible
+
+Debe distinguirse explícitamente de otros conceptos.
 
 Fórmula conceptual:
 
-`Runway = Saldo disponible / Burn histórico promedio`
+`Runway Cash = Cash disponible / Core Burn mensual`
 
-cuando:
+si:
 
-`Burn histórico promedio > 0`
+`Core Burn > 0`
 
-El runway debe interpretarse como una aproximación.
+Este KPI responde:
 
-Siempre distinguir entre:
+**¿cuántos meses podría operar Sommos si dependiera únicamente de la caja actual y del core burn?**
 
-- runway basado en cash actual;
-- runway proyectado con CxC/CxP;
-- runway basado en supuestos futuros.
+No incorpora necesariamente:
 
-## Dashboard
+- cobros futuros;
+- grants;
+- financiamiento.
 
-El `Dashboard` resume KPIs ejecutivos.
+---
 
-KPIs principales conocidos:
+# Runway según forecast
+
+También puede existir una lectura basada en la proyección completa.
+
+Este indicador debe considerar:
+
+- cash inicial;
+- ingresos/cobros proyectados;
+- pagos;
+- grants;
+- financiamiento;
+- core burn;
+- resto de flujos del escenario.
+
+Una forma útil de expresarlo es mediante:
+
+- primer mes de caja negativa;
+- caja mínima;
+- meses hasta cash-out.
+
+No confundirlo con:
+
+`Cash / Core Burn`
+
+---
+
+# Escenario Base
+
+El escenario Base debe representar:
+
+- forecast oficial disponible;
+- calendario actual de grants;
+- ingresos previstos;
+- costos previstos;
+- financiamiento considerado en el modelo.
+
+No modificar supuestos silenciosamente.
+
+---
+
+# Escenario Sin grants
+
+Debe permitir evaluar la dependencia de grants.
+
+Conceptualmente:
+
+`Escenario Sin Grants = Base - cobros futuros de grants`
+
+manteniendo iguales los demás supuestos salvo que exista una razón explícita para modificarlos.
+
+Este escenario ayuda a responder:
+
+**¿cuánto runway tiene Sommos sin depender de nuevos grants?**
+
+---
+
+# Escenario Grants +1 mes
+
+Debe desplazar los cobros futuros de grants un mes hacia adelante.
+
+No eliminar el grant.
+
+No modificar su importe.
+
+Debe mostrar el impacto de:
+
+`timing`
+
+sobre la liquidez.
+
+---
+
+# Escenarios adicionales
+
+No crear escenarios nuevos sin una pregunta de negocio clara.
+
+Posibles escenarios futuros podrían incluir:
+
+- revenue downside;
+- hiring freeze;
+- nuevo financiamiento;
+- reducción de gastos.
+
+Pero deben mantenerse separados y documentados.
+
+---
+
+# Primer mes de caja negativa
+
+Este indicador debe identificar:
+
+el primer periodo en que:
+
+`Cash proyectado < 0`
+
+Si no ocurre dentro del horizonte:
+
+indicar claramente que no existe cash-out dentro del periodo proyectado.
+
+No devolver un mes inventado.
+
+---
+
+# Caja mínima
+
+Debe mostrar:
+
+- importe mínimo proyectado;
+- periodo en que ocurre.
+
+Es una métrica importante incluso si la caja no llega a ser negativa.
+
+---
+
+# Saldo inicial de escenarios
+
+Todos los escenarios comparables deben partir de la misma caja actual validada, salvo que la definición del escenario cambie explícitamente el punto inicial.
+
+---
+
+# Horizonte
+
+Mantener un horizonte suficientemente útil para planificación.
+
+Actualmente el Runway puede extenderse aproximadamente 12 meses o hacia 2027.
+
+No proyectar indefinidamente con supuestos constantes sin advertirlo.
+
+---
+
+# Dashboard
+
+## Propósito
+
+El Dashboard debe permitir entender el estado financiero de Sommos en pocos segundos.
+
+No debe convertirse en una réplica de todas las pestañas.
+
+Debe priorizar:
+
+- liquidez;
+- capital de trabajo;
+- desempeño;
+- forecast;
+- riesgos;
+- estado del cierre.
+
+---
+
+# Bloques ejecutivos
+
+La estructura actual se organiza conceptualmente en cuatro bloques principales:
+
+## Liquidez y Runway
+
+Puede incluir:
 
 - Cash disponible
-- CxC pendiente
-- CxP pendiente
-- Ingresos último mes con datos
-- Burn último mes con datos
-- Runway
-- CxC vencida
-- Presupuesto disponible
+- Core Burn
+- Runway Cash
+- primer mes negativo
 
-## Cash disponible
+## Capital de trabajo
 
-Debe provenir de bancos/cuentas conciliadas.
+Puede incluir:
 
-No sumar CxC pendiente al cash.
+- CxC clientes
+- Grants por cobrar
+- CxP proveedores
+- CxP Sueldos
 
-No usar saldos proyectados como saldo bancario real.
+## Desempeño
 
-## CxC pendiente
+Puede incluir:
 
-Calcular desde `Transacciones` considerando:
+- ingresos
+- EBITDA
+- resultado neto
+- Budget vs Actual
 
-- Tipo = `Ingreso`
-- Estado pago = `Pendiente`
+## Forecast y Alertas
 
-## CxP pendiente
+Puede incluir:
 
-Calcular desde `Transacciones` considerando:
+- caja Dic-26
+- caja mínima
+- vencidos
+- obligaciones próximas
+- checks del modelo
 
-- Tipo = `Egreso`
-- Estado pago = `Pendiente`
+---
 
-Los pasivos de nómina pueden requerir consulta adicional a `CxP Sueldos` cuando se preparen estados financieros, pero no deben duplicarse si ya existen en `Transacciones`.
+# Cash disponible
 
-## CxC vencida
+La fuente debe ser la caja oficial del modelo.
 
-Debe considerar:
+Para último periodo cerrado:
 
-- Tipo = `Ingreso`
-- Estado pago = `Pendiente`
-- Fecha vencimiento anterior a la fecha actual
+preferir el resultado reconciliado con:
 
-Una cuenta vencida sigue siendo CxC; no es pérdida automáticamente.
+`Bancos`
 
-## Ingresos
+y presentado en:
 
-Para análisis ejecutivo distinguir:
+`Balance Sheet`
 
-### Ingresos operativos
+No sumar cuentas por cobrar al cash.
 
-Consultar principalmente:
+---
 
-- `Operative incomes`
-- `Transacciones`
+# CxC clientes
 
-### Grants y financiamiento
+Fuente:
 
-No confundir grants con ingresos operativos recurrentes.
+`CxC Mensual`
 
-La categoría:
+No calcular CxC simplemente como:
 
-`Other financing cash flow`
+`Ingreso Pendiente en Transacciones`
 
-debe analizarse separadamente cuando corresponda.
+La CxC oficial incorpora:
 
-## Gastos
+- devengo;
+- cobros;
+- roll-forward.
 
-Para análisis de gastos consultar:
+---
 
-- `Transacciones`
-- `Real S&A`
-- `Sueldos 2026`
+# Grants por cobrar
+
+Fuente:
+
+bloque correspondiente de:
+
+`CxC Mensual`
+
+Mantener separado de CxC clientes cuando el Dashboard así lo presenta.
+
+---
+
+# CxP proveedores
+
+Fuente:
+
+`CxP Mensual`
+
+No utilizar únicamente egresos pendientes de `Transacciones`.
+
+---
+
+# CxP Sueldos
+
+Fuente:
+
+`CxP Sueldos`
+
+No duplicar dentro de CxP proveedores si el Dashboard muestra ambas métricas separadamente.
+
+---
+
+# Cobros próximos 30 días
+
+Debe calcularse desde el calendario financiero oficial.
+
+Fuentes principales:
+
+- `CxC Mensual`
+- calendario/vencimientos relacionados
+
+Debe representar derechos de cobro esperados en:
+
+`hoy → hoy + 30 días`
+
+No depender exclusivamente de filas pendientes de Transacciones.
+
+---
+
+# Pagos próximos 30 días
+
+Debe incorporar según corresponda:
+
+- `CxP Mensual`
 - `CxP Sueldos`
+
+y sus vencimientos/calendarios.
+
+Debe representar obligaciones esperadas en:
+
+`hoy → hoy + 30 días`
+
+No contar dos veces una obligación presente en más de una vista.
+
+---
+
+# Aging / vencidos
+
+Cuando se muestre CxC vencida:
+
+debe representar saldo pendiente cuyo vencimiento ya pasó.
 
 No confundir:
 
-- gasto real;
-- obligación pendiente;
-- presupuesto;
-- pago bancario;
-- transferencia interna.
+- vencido;
+- incobrable.
 
-## Presupuesto
+Una CxC vencida continúa siendo un activo mientras siga vigente.
 
-`Presupuesto` sirve para comparar Budget versus ejecución.
+---
 
-No utilizar el total del P&L presupuestario automáticamente como burn total.
+# Revenue
 
-Puede haber categorías de `Transacciones` que no estén representadas en la matriz visible del presupuesto.
+Para lectura ejecutiva:
 
-## Conciliación bancaria
+usar principalmente:
 
-Antes de utilizar cash para análisis ejecutivo:
+`Real P&L`
 
-- comprobar que el cierre bancario esté conciliado;
-- revisar diferencias;
-- no corregir saldos artificialmente;
-- investigar movimientos faltantes o duplicados.
+No reconstruir revenue desde cobros de banco.
 
-Solo movimientos realizados deben afectar bancos.
+---
 
-## Estados financieros
+# EBITDA
 
-Esta skill puede apoyar la preparación futura de:
+Fuente:
 
-- Estado de Resultados
-- Balance General
-- Flujo de Caja
+`Real P&L`
 
-Pero no debe confundir las vistas administrativas actuales con estados financieros contables completos.
+Preservar la definición contable vigente.
 
-Fuentes conceptuales:
+No recalcular EBITDA con una fórmula distinta dentro del Dashboard.
 
-### Estado de Resultados
-- ingresos operativos;
-- grants según tratamiento contable definido;
-- Real S&A;
-- nómina;
-- otros gastos e ingresos.
+---
 
-### Balance General
-- Bancos;
-- CxC;
+# Resultado neto
+
+Fuente:
+
+`Real P&L`
+
+No utilizar flujo de caja neto como resultado neto.
+
+---
+
+# Budget vs Actual
+
+Fuente:
+
+`Presupuesto`
+
+y/o `Real P&L`
+
+según la fórmula viva.
+
+La comparación debe preservar la lógica:
+
+`Budget vs Real P&L`
+
+No Budget vs cash.
+
+---
+
+# Forecast de caja
+
+La principal fuente debe ser:
+
+`Runway Mensual`
+
+que, a su vez, consume:
+
+- Cash Flow;
+- Balance Sheet;
+- escenarios.
+
+El Dashboard no debe mantener una segunda proyección independiente.
+
+---
+
+# Gráfico de escenarios
+
+El Dashboard puede mostrar un gráfico de:
+
+- Base
+- Sin grants
+- Grants +1 mes
+
+El gráfico debe:
+
+- compartir mismo horizonte;
+- compartir mismo saldo inicial;
+- utilizar las mismas unidades;
+- mostrar claramente cuándo la caja cruza cero.
+
+No utilizar escalas engañosas.
+
+---
+
+# Cierre mensual
+
+El Dashboard contiene un bloque resumido de cierre.
+
+Puede mostrar:
+
+- Último mes cerrado
+- Bancos cerrados
+- Por categorizar
+- Sin conciliar
+- Estado cierre
+
+Este bloque es una vista ejecutiva.
+
+La lógica completa de cierre pertenecerá a:
+
+`finanzas-cierre-mensual`
+
+---
+
+# Último mes cerrado
+
+Debe representar el último periodo que cumple todos los controles requeridos.
+
+No avanzar este indicador únicamente porque cambió el calendario.
+
+Un nuevo mes solo se considera cerrado cuando haya sido validado.
+
+---
+
+# Bancos cerrados
+
+Debe mostrar conceptualmente:
+
+`Bancos conciliados / Bancos activos`
+
+No hardcodear permanentemente:
+
+`5/5`
+
+si cambia la cantidad de cuentas activas.
+
+---
+
+# Por categorizar
+
+Debe contar movimientos que aún requieren clasificación según la estructura viva.
+
+Fuente principal:
+
+`Transacciones`
+
+y/o estado equivalente del workflow.
+
+La expectativa para cierre es:
+
+`0`
+
+---
+
+# Sin conciliar
+
+Debe contar movimientos bancarios que aún requieran conciliación.
+
+No confundir con:
+
+- Pendiente de pago;
 - CxP;
-- CxP Sueldos;
-- otros activos y pasivos disponibles.
+- CxC.
 
-### Flujo de Caja
-- movimientos efectivamente realizados;
-- bancos;
-- clasificación operativa, inversión y financiamiento cuando corresponda.
+La expectativa para un periodo cerrado es:
 
-Antes de construir estados financieros formales se debe definir tratamiento contable y criterios de devengamiento.
+`0`
 
-## Auditoría de un KPI inesperado
+---
+
+# Checks de tres estados
+
+El Dashboard debe mostrar de manera ejecutiva el resultado de:
+
+- Modelo de 3 estados
+- Cash Flow vs Balance Sheet
+
+La lógica completa pertenece a:
+
+`finanzas-estados-financieros`
+
+No reconstruir estos checks de manera diferente dentro del Dashboard.
+
+---
+
+# Estado cierre
+
+Puede mostrarse como:
+
+`✓ CERRADO`
+
+solo cuando todos los criterios aplicables estén correctos.
+
+Si existe cualquier check requerido fallando:
+
+mostrar:
+
+`⚠ REVISAR`
+
+No ocultar alertas mediante formato.
+
+El texto debe ser autoexplicativo aun sin color.
+
+---
+
+# Regla importante sobre OK
+
+Nunca hardcodear:
+
+`OK`
+
+`CERRADO`
+
+o:
+
+`✓`
+
+si el valor puede calcularse desde controles reales.
+
+Un indicador debe poder fallar cuando algo está mal.
+
+---
+
+# Alertas
+
+Las alertas deben utilizarse para priorizar atención.
+
+Ejemplos:
+
+- cash negativo;
+- runway bajo;
+- CxC vencida alta;
+- pagos próximos superiores a cobros;
+- check financiero fallando;
+- banco sin cerrar;
+- movimientos sin categorizar.
+
+No utilizar rojo para diferencias pequeñas sin materialidad.
+
+---
+
+# Interpretación de liquidez
+
+No presentar un único runway como si fuera una verdad absoluta.
+
+Distinguir:
+
+## Runway Cash
+
+Caja disponible / Core Burn.
+
+## Runway Forecast
+
+Tiempo hasta caja negativa bajo escenario Base.
+
+## Runway Sin Grants
+
+Liquidez sin nuevos grants.
+
+Estas métricas responden preguntas diferentes.
+
+---
+
+# Cobros vs pagos próximos 30 días
+
+Comparar:
+
+`Cobros próximos 30d`
+
+vs:
+
+`Pagos próximos 30d`
+
+ayuda a detectar presión de liquidez inmediata.
+
+No concluir automáticamente que:
+
+`Pagos > Cobros`
+
+significa insolvencia.
+
+También deben considerarse:
+
+- cash actual;
+- grants;
+- financiamiento;
+- otros flujos.
+
+---
+
+# Current vs Forecast
+
+Todo KPI debe dejar claro si representa:
+
+- actual;
+- último cierre;
+- forecast;
+- escenario.
+
+No mezclar valores de distinto carácter sin etiquetarlos.
+
+---
+
+# Periodo del Dashboard
+
+Los KPIs de desempeño deben usar un periodo consistente.
+
+Preferir:
+
+`último mes cerrado`
+
+para Actual.
+
+No utilizar un mes parcialmente cargado como si fuera cierre completo.
+
+---
+
+# Formato visual
+
+El Dashboard debe ser ejecutivo y limpio.
+
+Preservar:
+
+- lenguaje visual Sommos;
+- jerarquía clara;
+- tarjetas KPI;
+- pocos colores;
+- alertas comprensibles;
+- números legibles;
+- unidades visibles;
+- gráficos simples.
+
+Evitar agregar demasiados KPIs.
+
+El Dashboard debe responder rápidamente las preguntas principales, no mostrar todo el modelo.
+
+---
+
+# Regla de densidad
+
+Antes de agregar un nuevo KPI preguntar:
+
+**¿qué decisión permite tomar esta métrica que no permiten las actuales?**
+
+Si no existe una respuesta clara:
+
+no añadirlo.
+
+---
+
+# Precisión
+
+Dashboard y Runway pueden redondear visualmente.
+
+Las fuentes subyacentes deben mantener precisión.
+
+No modificar valores fuente para mejorar la apariencia de una tarjeta.
+
+---
+
+# Auditoría de KPI inesperado
 
 Si un KPI parece incorrecto:
 
-1. revisar la fórmula;
-2. identificar su fuente;
-3. revisar filtros y fechas;
-4. comparar con `Transacciones`;
-5. comprobar estado `Pendiente` versus `Pagado/Cobrado`;
-6. revisar vencimientos;
-7. revisar conciliación bancaria;
-8. revisar TC;
-9. buscar duplicados;
-10. corregir el dato aguas arriba, no el KPI directamente.
+1. identificar la fórmula;
+2. identificar la fuente;
+3. comprobar periodo;
+4. comprobar si es Actual/Forecast;
+5. revisar la fuente aguas arriba;
+6. revisar signos;
+7. revisar exclusiones;
+8. comprobar duplicados;
+9. comprobar checks relacionados.
 
-## Tipo de cambio
+Corregir la fuente correcta.
 
-Respetar las reglas definidas en la skill de Transacciones y TC.
+No hardcodear el KPI.
 
-Reglas conocidas:
+---
 
-- USD → 1
-- SOL → 0.28
-- BOB → TC oficial BCB según fecha
-- otras monedas → TC manual cuando corresponda
+# Auditoría de Runway inesperado
 
-No reemplazar arbitrariamente el TC utilizado por `Transacciones`.
+Si el runway cambia significativamente:
 
-## Validaciones obligatorias
+revisar:
 
-Antes de modificar fórmulas de Runway o Dashboard:
+1. Cash actual;
+2. Core Burn;
+3. periodo utilizado;
+4. Real S&A;
+5. Sueldos 2026;
+6. forecast del Cash Flow;
+7. grants;
+8. financiamiento;
+9. escenario;
+10. gastos extraordinarios.
 
-1. leer encabezados actuales;
-2. leer fórmulas actuales;
-3. identificar dependencias;
-4. comprobar que no existan errores previos;
-5. comparar resultados antes y después;
-6. verificar `Transacciones`;
-7. verificar `Bancos`;
-8. buscar `#REF!`, `#VALUE!`, `#N/A` y `#ERROR!`.
+No atribuir automáticamente el cambio a cash.
 
-## Reglas transversales
+---
 
-- El Google Sheet vivo prevalece sobre snapshots almacenados en GitHub.
-- Nunca asumir posiciones históricas de columnas.
-- Leer el Sheet antes de escribir.
-- No duplicar transacciones.
-- No inventar fechas, cuentas, responsables o movimientos.
-- No crear movimientos para hacer cuadrar bancos o KPIs.
-- Mantener trazabilidad entre dato fuente y vista ejecutiva.
-- Explicar claramente si una cifra es real, pendiente, presupuestada o proyectada.
+# Mes parcialmente cerrado
+
+Si el periodo actual todavía no está cerrado:
+
+el Dashboard debe distinguirlo del último periodo cerrado.
+
+No actualizar automáticamente:
+
+`Último mes cerrado`
+
+solo porque existan datos parciales del siguiente mes.
+
+---
+
+# Relación con Presupuesto
+
+El Dashboard puede mostrar variación contra Budget.
+
+La lógica detallada debe venir de:
+
+`finanzas-presupuesto-vs`
+
+No reconstruir Budget vs Actual usando cash.
+
+---
+
+# Relación con Estados Financieros
+
+El Dashboard consume:
+
+- P&L;
+- Balance Sheet;
+- Cash Flow;
+- checks.
+
+No modifica sus fórmulas salvo que el usuario solicite una corrección de fuente y se utilice la skill correspondiente.
+
+---
+
+# Relación con CxC/CxP
+
+El Dashboard consume los schedules oficiales.
+
+No reconstruir capital de trabajo desde pendientes de `Transacciones` si existe una vista reconciliada de CxC/CxP.
+
+---
+
+# Relación con Bancos
+
+Cash histórico debe estar respaldado por bancos conciliados.
+
+Si el Dashboard muestra cash diferente al Balance/Bancos:
+
+investigar.
+
+No escoger arbitrariamente uno de los valores.
+
+---
+
+# QA antes de modificar Runway
+
+- [ ] Leí fórmulas actuales.
+- [ ] Identifiqué caja inicial.
+- [ ] Identifiqué frontera histórico/forecast.
+- [ ] Revisé Core Burn.
+- [ ] Revisé grants.
+- [ ] Revisé Cash Flow.
+- [ ] Revisé Balance Sheet.
+- [ ] Revisé escenarios.
+- [ ] Confirmé horizonte.
+
+---
+
+# QA después de modificar Runway
+
+Comprobar:
+
+- caja inicial;
+- escenario Base;
+- Sin grants;
+- Grants +1 mes;
+- core burn;
+- caja mínima;
+- primer mes negativo;
+- runway cash;
+- continuidad mensual;
+- gráfico del Dashboard.
+
+---
+
+# QA antes de modificar Dashboard
+
+- [ ] Identifiqué fuente de cada KPI.
+- [ ] Identifiqué periodo.
+- [ ] Confirmé Actual vs Forecast.
+- [ ] Revisé checks.
+- [ ] Revisé cierre mensual.
+- [ ] Evité duplicar lógica existente.
+
+---
+
+# QA después de modificar Dashboard
+
+Comprobar:
+
+- Cash;
+- Core Burn;
+- Runway;
+- primer mes negativo;
+- CxC;
+- CxP;
+- CxP Sueldos;
+- próximos 30 días;
+- ingresos;
+- EBITDA;
+- resultado neto;
+- Budget vs Actual;
+- caja forecast;
+- checks;
+- estado de cierre;
+- gráfico.
+
+Buscar:
+
+- `#REF!`
+- `#VALUE!`
+- `#N/A`
+- `#DIV/0!`
+- `#ERROR!`
+
+---
+
+# Guardrails
+
+- No reconstruir CxC/CxP únicamente desde Transacciones.
+- No usar cash como revenue.
+- No usar pagos como gasto devengado.
+- No asumir burn cero porque no existan pendientes.
+- No sumar CxC al cash.
+- No sumar grants futuros al cash actual.
+- No usar Budget como cash forecast histórico.
+- No hardcodear OK/CERRADO.
+- No esconder checks fallidos.
+- No modificar estados financieros desde Dashboard para mejorar KPIs.
+- No crear escenarios sin documentar sus supuestos.
+- No eliminar gastos extraordinarios del burn sin revisar metodología.
+- No declarar runway sin explicar qué definición se está usando.
+- No modificar históricos cerrados silenciosamente.
+- No reportar como terminado sin releer el archivo vivo.
+
+---
+
+# Regla de finalización
+
+Una modificación de Runway/Dashboard solamente está terminada cuando:
+
+- fuentes correctas;
+- periodos correctos;
+- escenarios correctos;
+- KPIs correctos;
+- checks financieros correctos;
+- cierre mensual correctamente representado;
+- fórmulas releídas;
+- ausencia de errores.
+
+---
+
+# Coordinación con otras skills
+
+## `finanzas-config-categorizacion`
+
+Usar para:
+
+- categorías;
+- taxonomía.
+
+## `finanzas-transacciones-tc`
+
+Usar para:
+
+- movimientos;
+- cash realizado;
+- TC;
+- categorización transaccional.
+
+## `finanzas-devengo-operativo`
+
+Usar para:
+
+- Operative incomes;
+- Real S&A;
+- Sueldos 2026;
+- base operativa del core burn.
+
+## `finanzas-cxc-cxp`
+
+Usar para:
+
+- CxC;
+- CxP;
+- CxP Sueldos;
+- vencimientos;
+- próximos cobros/pagos.
+
+## `finanzas-bancos-conciliacion`
+
+Usar para:
+
+- cash histórico;
+- bancos cerrados;
+- conciliación.
+
+## `finanzas-estados-financieros`
+
+Usar para:
+
+- Real P&L;
+- Balance Sheet;
+- Cash Flow;
+- checks de tres estados.
+
+## `finanzas-presupuesto-vs`
+
+Usar para:
+
+- Budget vs Actual;
+- variaciones.
+
+## `finanzas-cierre-mensual`
+
+Cuando exista, usar para:
+
+- criterios completos de cierre;
+- determinar formalmente si un mes puede considerarse `✓ CERRADO`.
+
+---
+
+# Referencias
+
+Consultar cuando corresponda:
+
+- `references/runway.md`
+- `references/dashboard.md`
+- `references/interpretacion.md`
+
+---
+
+# Alcance final
+
+Esta skill debe transformar el modelo financiero en una respuesta clara a:
+
+**¿Dónde estamos hoy?**
+
+**¿Qué pasa con la caja si seguimos así?**
+
+**¿Qué entra y qué sale próximamente?**
+
+**¿Qué riesgos debemos mirar?**
+
+**¿Podemos confiar en los números que estamos viendo?**
+
+Runway y Dashboard deben servir para tomar decisiones, no solamente para visualizar cifras.
